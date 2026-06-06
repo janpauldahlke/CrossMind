@@ -1,0 +1,37 @@
+[
+  {
+    "prompt": "A 45-year-old male presents with chest pain radiating to his left arm and diaphoresis. The specialist assessment indicates that",
+    "generated": "The patient is likely experiencing a cardiac event, such as a heart attack (myocardial infarction), and immediate cardiac evaluation and treatment are recommended.",
+    "num_tokens": 31,
+    "tokens_per_second": 35.64,
+    "stop_reason": "eos"
+  },
+  {
+    "prompt": "For a patient with Type 2 diabetes and chronic kidney disease, the recommended treatment approach involves",
+    "generated": "A comprehensive treatment approach should include blood glucose control with a goal of a HbA1c level below 7.0% and management of blood pressure to a target of less than 140/90, with a consideration of a",
+    "num_tokens": 50,
+    "tokens_per_second": 50.44,
+    "stop_reason": "max_tokens"
+  },
+  {
+    "prompt": "A 30-year-old woman with persistent fatigue, weight gain, and cold intolerance most likely has a condition affecting the",
+    "generated": "A 30-year-old woman with persistent fatigue, weight gain, and cold intolerance is likely to have a condition affecting the thyroid, such as hypothyroidism. Further evaluation with a thyroid function test is recommended.",
+    "num_tokens": 44,
+    "tokens_per_second": 49.85,
+    "stop_reason": "eos"
+  },
+  {
+    "prompt": "The primary mechanism of action of metformin in managing blood glucose levels involves",
+    "generated": "inhibiting the liver's production of glucose and improving the body's response to insulin.",
+    "num_tokens": 18,
+    "tokens_per_second": 45.38,
+    "stop_reason": "eos"
+  },
+  {
+    "prompt": "A post-operative patient on day 3 develops sudden shortness of breath and pleuritic chest pain. The most important immediate step is to",
+    "generated": "Perform a chest X-ray and consider a chest CT with contrast to assess for possible pulmonary complications such as a pulmonary embolism or post-operative complications. Consider a blood test for D-dimers as a diagnostic tool. \n\nNote: The most critical immediate",
+    "num_tokens": 50,
+    "tokens_per_second": 50.07,
+    "stop_reason": "max_tokens"
+  }
+]

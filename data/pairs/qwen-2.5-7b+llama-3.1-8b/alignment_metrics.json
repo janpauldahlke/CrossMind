@@ -1,0 +1,7 @@
+{
+  "cosine_similarity_mean": 0.83,
+  "lambda_reg": 0.0001,
+  "n_train_tokens": 324474,
+  "practitioner_dim": 3584,
+  "specialist_dim": 4096
+}

@@ -1,0 +1,226 @@
+<mat-toolbar class="toolbar" color="primary">
+  <div class="toolbar-brand">
+    <mat-icon aria-hidden="true">local_hospital</mat-icon>
+    <span class="title">Clinic — Practitioner</span>
+  </div>
+  <span class="spacer"></span>
+  @if (keyFingerprint()) {
+    <span class="badge" [title]="'Key fingerprint: ' + keyFingerprint()">Key {{ keyFingerprint() }}</span>
+  }
+</mat-toolbar>
+
+<p class="demo-disclaimer" role="note">
+  <mat-icon aria-hidden="true">science</mat-icon>
+  <span><strong>DEMO</strong> — Research prototype only. Not medical advice, diagnosis, or treatment.</span>
+</p>
+
+<div class="layout">
+  <section class="main">
+    @if (modelLabels(); as m) {
+      <div class="models-strip">
+        <span class="models-chip"><strong>Encodes with</strong> {{ m.practitioner_short }}</span>
+        <span class="models-chip"><strong>Consults</strong> {{ m.specialist_short }}</span>
+      </div>
+    }
+
+    <div class="mode-row">
+      <label class="field-label">Mode</label>
+      <mat-button-toggle-group [value]="mode()" (change)="onModeChange($event.value)" class="mode-toggle">
+        <mat-button-toggle value="sealed">Sealed</mat-button-toggle>
+        <mat-button-toggle value="helix" [disabled]="!helixAvailable()">HELIX</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+
+    <div class="passphrase-block">
+      <label class="field-label" for="clinic-passphrase">Shared passphrase</label>
+      <div class="passphrase-row">
+        <mat-form-field appearance="outline" class="pass-field" subscriptSizing="dynamic">
+          <input
+            id="clinic-passphrase"
+            matInput
+            type="password"
+            placeholder="Enter shared key phrase"
+            [ngModel]="passphrase()"
+            (ngModelChange)="passphrase.set($event)"
+            (keyup.enter)="applyPassphrase()"
+            [disabled]="keyLoading()" />
+        </mat-form-field>
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="applyPassphrase()"
+          [disabled]="keyLoading() || !passphrase().trim()">
+          Set key
+        </button>
+      </div>
+    </div>
+
+    @if (mode() === 'helix') {
+      <div class="passphrase-block helix-key-block">
+        <label class="field-label" for="clinic-helix-key">HELIX key</label>
+        <div class="passphrase-row">
+          <mat-form-field appearance="outline" class="pass-field" subscriptSizing="dynamic">
+            <input
+              id="clinic-helix-key"
+              matInput
+              type="password"
+              placeholder="Enter HELIX key"
+              [ngModel]="helixKey()"
+              (ngModelChange)="helixKey.set($event)"
+              (keyup.enter)="applyHelixKey()"
+              [disabled]="helixKeyLoading()" />
+          </mat-form-field>
+          <button
+            mat-flat-button
+            color="accent"
+            (click)="applyHelixKey()"
+            [disabled]="helixKeyLoading() || !helixKey().trim()">
+            Set HELIX key
+          </button>
+        </div>
+        @if (helixKeyFingerprint()) {
+          @if (helixHospitalSynced()) {
+            <p class="helix-ready">HELIX channel ready · clinic &amp; hospital · {{ helixKeyFingerprint() }}</p>
+          } @else {
+            <p class="helix-warn">
+              HELIX key set locally ({{ helixKeyFingerprint() }}) — hospital still on
+              {{ helixHospitalFingerprint() ?? 'none' }}. Sync before routing.
+            </p>
+            <button
+              mat-stroked-button
+              color="warn"
+              class="helix-sync-btn"
+              (click)="syncHelixToHospital()"
+              [disabled]="helixSyncLoading()">
+              Sync to hospital
+            </button>
+          }
+        }
+      </div>
+    }
+
+    <button type="button" class="phrase-toggle" (click)="showPhrases.set(!showPhrases())">
+      <mat-icon>{{ showPhrases() ? 'expand_less' : 'expand_more' }}</mat-icon>
+      Quick prompts
+    </button>
+    @if (showPhrases()) {
+      <div class="prompt-list">
+        @for (p of phrases(); track p) {
+          <button
+            type="button"
+            class="prompt-btn"
+            (click)="selectPhrase(p)"
+            [disabled]="generating() || !keyFingerprint() || (mode() === 'helix' && !helixKeyFingerprint())">
+            {{ p }}
+          </button>
+        }
+      </div>
+    }
+
+    <div class="messages" #scrollContainer>
+      @if (messages().length === 0) {
+        <p class="hint">
+          @if (mode() === 'sealed') {
+            Enter passphrase, then ask a clinical question. Vectors are encrypted before leaving the clinic.
+          } @else {
+            Set passphrase and HELIX key, then submit a case for encrypted department routing.
+          }
+        </p>
+      }
+      @for (msg of messages(); track $index) {
+        <div class="bubble-row" [class.user]="msg.role === 'user'">
+          <div class="bubble" [class.assistant]="msg.role === 'assistant'" [class.helix-card]="!!msg.helix">
+            @if (msg.helix) {
+              <app-helix-result-card
+                [result]="msg.helix"
+                [practitionerShort]="modelLabels()?.practitioner_short ?? 'Clinic'"
+                [specialistShort]="modelLabels()?.specialist_short ?? 'Hospital'" />
+            } @else {
+              <span class="bubble-text">{{ msg.text }}</span>
+              @if (msg.streaming) {
+                <span class="cursor">▌</span>
+              }
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="composer">
+      <div class="composer-inner">
+        <label class="field-label" for="clinic-query">
+          {{ mode() === 'helix' ? 'Routing query' : 'Clinical query' }}
+        </label>
+        <div class="composer-row">
+          <mat-form-field appearance="outline" class="composer-field" subscriptSizing="dynamic">
+            <textarea
+              id="clinic-query"
+              matInput
+              rows="2"
+              [placeholder]="mode() === 'helix' ? 'Describe symptoms for encrypted routing…' : 'Type a clinical question…'"
+              [(ngModel)]="draft"
+              (keydown.enter)="$event.preventDefault(); submit()"
+              [disabled]="generating() || !keyFingerprint()"></textarea>
+          </mat-form-field>
+          <button
+            mat-mini-fab
+            color="primary"
+            class="send-btn"
+            (click)="submit()"
+            [disabled]="!canSubmit()"
+            aria-label="Send query">
+            @if (generating()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              <mat-icon>send</mat-icon>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  @if (mode() === 'sealed') {
+    <aside class="wire-panel">
+      @if (modelLabels(); as m) {
+        <div class="models-panel">
+          <h3>Models</h3>
+          <dl class="models-meta">
+            <dt>Encodes with</dt>
+            <dd>{{ m.practitioner }}</dd>
+            <dt>Consults</dt>
+            <dd>{{ m.specialist }}</dd>
+          </dl>
+        </div>
+      }
+
+      <h3>Outbound wire</h3>
+
+      <div class="packet-log" #packetLogContainer>
+        @if (packetLog().length === 0) {
+          <p class="muted">No packets sent yet.</p>
+        } @else {
+          @for (pkt of packetLog(); track pkt.step) {
+            <div class="packet-line">{{ packetLine(pkt) }}</div>
+          }
+        }
+      </div>
+
+      @if (lastWire(); as w) {
+        <dl class="wire-meta">
+          <dt>Latest destination</dt><dd>{{ w.method }} {{ w.url }}</dd>
+          <dt>Payload prefix</dt><dd class="mono">{{ w.vector_b64_prefix }}…</dd>
+        </dl>
+      }
+
+      @if (lastVectorSample().length) {
+        <h4>Ciphertext sample</h4>
+        <div class="vector-bars">
+          @for (v of lastVectorSample().slice(0, 32); track $index) {
+            <span class="bar" [style.height.%]="(Math.abs(v) * 50) % 100"></span>
+          }
+        </div>
+      }
+    </aside>
+  }
+</div>

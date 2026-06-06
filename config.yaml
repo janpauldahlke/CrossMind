@@ -1,0 +1,97 @@
+# CrossMind config — macOS / Apple Silicon / MPS.
+
+models:
+  llama:
+    model_id: "/Users/jandahlke/dev/hagbards_stuff/_utils/llama.cpp/models/Meta-Llama-3.1-8B-Instruct"
+    hidden_dim: 4096
+    vocab_size: 128256
+    quantization: "none"
+  qwen:
+    model_id: "/Users/jandahlke/dev/hagbards_stuff/_utils/llama.cpp/models/Qwen2.5-7B-Instruct"
+    hidden_dim: 3584
+    vocab_size: 152064
+    quantization: "none"
+
+active_models:
+  practitioner: qwen-2.5-7b
+  specialist: llama-3.1-8b
+
+model_catalog:
+  practitioners:
+    - id: qwen-2.5-7b
+      label: Qwen 2.5 7B Instruct
+      short_label: Qwen 2.5
+      model_path: "/Users/jandahlke/dev/hagbards_stuff/_utils/llama.cpp/models/Qwen2.5-7B-Instruct"
+      hidden_dim: 3584
+      vocab_size: 152064
+      quantization: "none"
+    - id: phi-3.5-mini
+      label: Phi-3.5 Mini Instruct
+      short_label: Phi-3.5
+      model_path: "/Users/jandahlke/dev/hagbards_stuff/_utils/llama.cpp/models/Phi-3.5-mini-instruct"
+      hidden_dim: 3072
+      vocab_size: 32064
+      quantization: "none"
+
+  specialists:
+    - id: llama-3.1-8b
+      label: Llama 3.1 8B Instruct
+      short_label: Llama 3.1
+      model_path: "/Users/jandahlke/dev/hagbards_stuff/_utils/llama.cpp/models/Meta-Llama-3.1-8B-Instruct"
+      hidden_dim: 4096
+      vocab_size: 128256
+      quantization: "none"
+    - id: mistral-7b-v0.3
+      label: Mistral 7B Instruct v0.3
+      short_label: Mistral 7B
+      model_path: "/Users/jandahlke/dev/hagbards_stuff/_utils/llama.cpp/models/Mistral-7B-Instruct-v0.3"
+      hidden_dim: 4096
+      vocab_size: 32768
+      quantization: "none"
+
+storage:
+  pairs_dir: "data/pairs"
+  raw_dir: "data/raw"
+  aligned_dir: "data/aligned"
+
+model_pairs:
+  - id: qwen-2.5-7b+llama-3.1-8b
+    practitioner: qwen-2.5-7b
+    specialist: llama-3.1-8b
+  - id: phi-3.5-mini+qwen-2.5-7b
+    practitioner: phi-3.5-mini
+    specialist: qwen-2.5-7b
+
+alignment:
+  lambda_reg: 1.0e-4
+  train_samples: 3500
+  val_samples: 500
+  chunk_size: 10000
+  map_path: "data/pairs/qwen-2.5-7b+llama-3.1-8b/alignment_map.npz"
+  metrics_path: "data/pairs/qwen-2.5-7b+llama-3.1-8b/alignment_metrics.json"
+
+extraction:
+  raw_dir: "data/raw"
+  aligned_dir: "data/aligned"
+  dataset_path: "data/public_dataset/texts.jsonl"
+  precision: "float16"
+
+generation:
+  max_tokens: 100
+  lm_head_path: "data/pairs/qwen-2.5-7b+llama-3.1-8b/lm_head.npy"
+  tokenizer_path: "data/pairs/qwen-2.5-7b+llama-3.1-8b/tokenizer"
+
+encryption:
+  key_dim: 4096
+  key_path: "data/rotation_key.npy"
+
+network:
+  party_a:
+    host: "0.0.0.0"
+    port: 8420
+  party_b:
+    server_url: "http://localhost:8420"
+  party_b_api:
+    host: "0.0.0.0"
+    port: 8421
+  key_exchange: "passphrase"

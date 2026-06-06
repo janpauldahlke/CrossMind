@@ -1,0 +1,34 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+.venv/
+venv/
+env/
+
+# Weight files — default ignore; exceptions below
+*.npy
+*.npz
+!data/.gitkeep
+!data/pairs/qwen-2.5-7b+llama-3.1-8b/alignment_map.npz
+!data/pairs/qwen-2.5-7b+llama-3.1-8b/routing_head.npz
+
+.env
+*.log
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Extraction/training blobs (large; not in repo)
+data/raw/
+data/aligned/
+
+# Node / Angular (any depth — clinic, hospital, nested installs)
+node_modules/
+frontend/dist/
+frontend/.angular/

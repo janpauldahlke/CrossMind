@@ -1,0 +1,206 @@
+<mat-toolbar class="toolbar" color="primary">
+  <div class="toolbar-brand">
+    <mat-icon aria-hidden="true">domain</mat-icon>
+    <span class="title">Hospital — Specialist</span>
+  </div>
+  <span class="spacer"></span>
+  @if (connected()) {
+    <span class="live">● Live</span>
+  }
+  @if (helixBootstrapped()) {
+    <span class="badge helix-badge">HELIX channel</span>
+  }
+  @if (keyFingerprint()) {
+    <span class="badge" [title]="'Key fingerprint: ' + keyFingerprint()">Key {{ keyFingerprint() }}</span>
+  }
+</mat-toolbar>
+
+<p class="demo-disclaimer" role="note">
+  <mat-icon aria-hidden="true">science</mat-icon>
+  <span><strong>DEMO</strong> — Research prototype only. Not medical advice, diagnosis, or treatment.</span>
+</p>
+
+<div class="layout">
+  <section class="main">
+    @if (modelLabels(); as m) {
+      <div class="models-strip">
+        <span class="models-chip"><strong>Decodes with</strong> {{ m.specialist_short }}</span>
+        <span class="models-chip"><strong>Aligned from</strong> {{ m.practitioner_short }}</span>
+      </div>
+    }
+
+    <div class="passphrase-block">
+      <label class="field-label" for="hospital-passphrase">Shared passphrase</label>
+      <div class="passphrase-row">
+        <mat-form-field appearance="outline" class="pass-field" subscriptSizing="dynamic">
+          <input
+            id="hospital-passphrase"
+            matInput
+            type="password"
+            placeholder="Enter shared key phrase"
+            [ngModel]="passphrase()"
+            (ngModelChange)="passphrase.set($event)"
+            (keyup.enter)="applyPassphrase()"
+            [disabled]="keyLoading()" />
+        </mat-form-field>
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="applyPassphrase()"
+          [disabled]="keyLoading() || !passphrase().trim()">
+          Set key
+        </button>
+        <button mat-stroked-button (click)="clearStream()">Clear</button>
+      </div>
+    </div>
+
+    @if (helixAvailable()) {
+      <div class="helix-status-block" [class.helix-status-active]="helixBootstrapped()">
+        <div class="helix-status-row">
+          <span class="helix-status-tag">HELIX</span>
+          @if (helixBootstrapped()) {
+            <span class="helix-status-label">Channel active</span>
+          } @else {
+            <span class="helix-status-label helix-status-idle">No active channel</span>
+          }
+        </div>
+        <p class="helix-hint">
+          @if (helixBootstrapped()) {
+            Clinic holds the secret key; this hub only has the public CKKS context.
+            @if (helixKeyFingerprint(); as fp) {
+              <span class="helix-channel-id">Channel {{ fp }}</span>
+            }
+          } @else {
+            Set HELIX key on the clinic, or clinic switched back to Sealed mode.
+          }
+        </p>
+      </div>
+    }
+
+    <p class="hint">No patient prompt is received — only encrypted data on the wire.</p>
+
+    <mat-tab-group [selectedIndex]="activeTab()" (selectedIndexChange)="activeTab.set($event)" class="wire-tabs">
+      <mat-tab label="Sealed wire">
+        <div class="tab-panel">
+          @if (requestGroups().length === 0) {
+            <p class="waiting">Waiting for inbound packets from the clinic…</p>
+          } @else {
+            <mat-accordion class="request-accordion" multi>
+              @for (group of requestGroups(); track group.id) {
+                <mat-expansion-panel
+                  [expanded]="group.expanded"
+                  (expandedChange)="onPanelExpanded(group.id, $event)">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>{{ groupTitle(group) }}</mat-panel-title>
+                    <mat-panel-description>{{ groupSummary(group) }}</mat-panel-description>
+                  </mat-expansion-panel-header>
+                  <div class="group-packets">
+                    @for (pkt of group.packets; track pkt.received_at + '-' + pkt.step) {
+                      <div class="packet-line">{{ packetLine(pkt) }}</div>
+                    }
+                  </div>
+                </mat-expansion-panel>
+              }
+            </mat-accordion>
+          }
+        </div>
+      </mat-tab>
+
+      <mat-tab label="HELIX compute" [disabled]="!helixAvailable()">
+        <div class="tab-panel">
+          @if (helixRequests().length === 0) {
+            <p class="waiting">Waiting for HELIX homomorphic compute requests…</p>
+          } @else {
+            <mat-accordion class="request-accordion helix-accordion" multi>
+              @for (req of helixRequests(); track req.id) {
+                <mat-expansion-panel
+                  [expanded]="req.expanded"
+                  (expandedChange)="onHelixExpanded(req.id, $event)"
+                  class="helix-panel">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>{{ helixTitle(req) }}</mat-panel-title>
+                    <mat-panel-description>{{ helixLine(req) }}</mat-panel-description>
+                  </mat-expansion-panel-header>
+                  <div class="helix-card-body">
+                    <div class="helix-card-header">
+                      <span class="helix-tag">HELIX</span>
+                      <span class="helix-status">Homomorphic matmul complete · {{ req.activity.compute_ms.toFixed(0) }}ms</span>
+                    </div>
+                    <p class="helix-note">Routing result not visible — ciphertext-only compute.</p>
+                    <div class="helix-heatmap-wrap">
+                      <div class="helix-heatmap" aria-hidden="true">
+                        @for (v of req.activity.ciphertext_sample; track $index) {
+                          <div
+                            class="heat-cell"
+                            [style.background]="cellColor(v, req.activity.ciphertext_sample)">
+                          </div>
+                        }
+                      </div>
+                    </div>
+                    <p class="helix-meta">
+                      {{ formatCiphertextSize(req.activity.bytes_on_wire) }} CKKS ciphertext on wire
+                    </p>
+                  </div>
+                </mat-expansion-panel>
+              }
+            </mat-accordion>
+          }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </section>
+
+  <aside class="wire-panel">
+    @if (modelLabels(); as m) {
+      <div class="models-panel">
+        <h3>Models</h3>
+        <dl class="models-meta">
+          <dt>Decodes with</dt>
+          <dd>{{ m.specialist }}</dd>
+          <dt>Aligned from</dt>
+          <dd>{{ m.practitioner }}</dd>
+        </dl>
+      </div>
+    } @else {
+      <p class="muted models-loading">Loading models…</p>
+    }
+
+    @if (activeTab() === 0) {
+      <h3>Inbound wire (Sealed)</h3>
+      @if (lastPacket(); as pkt) {
+        <dl class="wire-meta">
+          <dt>Request</dt>
+          <dd>#{{ requestGroups().length }}</dd>
+          <dt>Step</dt><dd>{{ pkt.step }}</dd>
+          <dt>Bytes on wire</dt><dd>{{ pkt.bytes_on_wire | number }}</dd>
+          <dt>Received</dt><dd>{{ formatTime(pkt.received_at) }}</dd>
+          @if (pkt.vector_b64_prefix) {
+            <dt>Payload prefix</dt><dd class="mono">{{ pkt.vector_b64_prefix }}…</dd>
+          }
+        </dl>
+        <h4>Ciphertext sample</h4>
+        <div class="vector-bars">
+          @for (v of pkt.vector_sample.slice(0, 32); track $index) {
+            <span class="bar" [style.height.%]="(Math.abs(v) * 50) % 100"></span>
+          }
+        </div>
+      } @else {
+        <p class="muted">No packets received yet.</p>
+      }
+    } @else {
+      <h3>HELIX compute</h3>
+      @if (lastHelix(); as h) {
+        <dl class="wire-meta">
+          <dt>Request</dt>
+          <dd>#{{ helixRequests().length }}</dd>
+          <dt>Bytes on wire</dt><dd>{{ h.bytes_on_wire | number }}</dd>
+          <dt>Compute</dt><dd>{{ h.compute_ms.toFixed(0) }}ms</dd>
+          <dt>Received</dt><dd>{{ formatTime(h.received_at) }}</dd>
+        </dl>
+        <p class="muted helix-sidebar-note">Department label never sent to hospital.</p>
+      } @else {
+        <p class="muted">No HELIX requests yet.</p>
+      }
+    }
+  </aside>
+</div>
